@@ -445,6 +445,21 @@ export type Place = {
 	"osm:note"?: string;
 };
 
+// Map controls i18n
+export type MapControlsTranslations = {
+	fullScreen?: string;
+	goToHome?: string;
+	addLocation?: string;
+	communityMap?: string;
+	merchantMap?: string;
+	dataRefreshAvailable?: string;
+	support?: string;
+	supportWithSats?: string;
+	zoomIn?: string;
+	zoomOut?: string;
+	locate?: string;
+};
+
 // Worker progress tracking
 export interface ProgressUpdate {
 	percent: number;

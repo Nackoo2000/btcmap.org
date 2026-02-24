@@ -8,7 +8,12 @@ import { buildFieldsParam, PLACE_FIELD_SETS } from "$lib/api-fields";
 import en from "$lib/i18n/locales/en.json";
 import { selectedMerchant } from "$lib/store";
 import { theme } from "$lib/theme";
-import type { DomEventType, Leaflet, Place } from "$lib/types";
+import type {
+	DomEventType,
+	Leaflet,
+	MapControlsTranslations,
+	Place,
+} from "$lib/types";
 import { userLocation } from "$lib/userLocationStore";
 import { errToast, humanizeIconName } from "$lib/utils";
 
@@ -79,20 +84,6 @@ export const layers = (leaflet: Leaflet, map: Map) => {
 export const attribution = (L: Leaflet, map: Map) => {
 	// Use Leaflet's default attribution control
 	L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
-};
-
-export type MapControlsTranslations = {
-	fullScreen?: string;
-	goToHome?: string;
-	addLocation?: string;
-	communityMap?: string;
-	merchantMap?: string;
-	dataRefreshAvailable?: string;
-	support?: string;
-	supportWithSats?: string;
-	zoomIn?: string;
-	zoomOut?: string;
-	locate?: string;
 };
 
 // Fallbacks when callers omit translations (e.g. communities map, add-location). Sourced from en.json.
