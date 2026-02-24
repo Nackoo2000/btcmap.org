@@ -2,6 +2,7 @@
 import type { GeoJSON } from "geojson";
 import type { Map } from "leaflet";
 import { onDestroy, onMount } from "svelte";
+import { get } from "svelte/store";
 import tippy from "tippy.js";
 
 import AreaMerchantDrawer from "$components/area/AreaMerchantDrawer.svelte";
@@ -10,8 +11,10 @@ import MapLoadingEmbed from "$components/MapLoadingEmbed.svelte";
 import ShowTags from "$components/ShowTags.svelte";
 import TaggingIssues from "$components/TaggingIssues.svelte";
 import { GradeTable } from "$lib/constants";
+import { _ } from "$lib/i18n";
 import { loadMapDependencies } from "$lib/map/imports";
 import {
+	applyMapControlTranslations,
 	attribution,
 	changeDefaultIcons,
 	generateIcon,
@@ -57,6 +60,7 @@ $: gradeTooltip &&
 let mapElement: HTMLDivElement;
 let map: Map;
 let mapLoaded = false;
+let unsubscribeLocale: (() => void) | undefined;
 
 let baseMaps: BaseMaps;
 
@@ -94,6 +98,7 @@ onMount(async () => {
 });
 
 onDestroy(async () => {
+	unsubscribeLocale?.();
 	if (map) {
 		console.info("Unloading Leaflet map.");
 		map.remove();
@@ -128,11 +133,23 @@ const initializeData = () => {
 		/* eslint-enable no-undef */
 		let upToDateLayer = leaflet.featureGroup.subGroup(markers);
 
+		const translate = get(_);
+		const mapControlsT = {
+			locate: translate("mapControls.locate"),
+			fullScreen: translate("mapControls.fullScreen"),
+			zoomIn: translate("mapControls.zoomIn"),
+			zoomOut: translate("mapControls.zoomOut"),
+		};
 		// add locate button to map
-		geolocate(leaflet, map, LocateControl);
+		geolocate(leaflet, map, LocateControl, mapControlsT);
 
 		// change default icons
-		changeDefaultIcons(true, leaflet, mapElement, DomEvent);
+		changeDefaultIcons(true, leaflet, mapElement, DomEvent, mapControlsT);
+
+		unsubscribeLocale?.();
+		unsubscribeLocale = _.subscribe(() => {
+			applyMapControlTranslations(get(_));
+		});
 
 		// add area poly to map
 		leaflet.geoJSON(geoJSON, { style: { fill: false } }).addTo(map);

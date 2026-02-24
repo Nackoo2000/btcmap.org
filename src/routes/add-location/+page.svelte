@@ -3,6 +3,7 @@ import axios from "axios";
 import DOMPurify from "dompurify";
 import type { Map, MaplibreGL, Marker } from "leaflet";
 import { onDestroy, onMount, tick } from "svelte";
+import { get } from "svelte/store";
 
 import FormSuccess from "$components/FormSuccess.svelte";
 import FormSelect from "$components/form/FormSelect.svelte";
@@ -14,6 +15,7 @@ import PrimaryButton from "$components/PrimaryButton.svelte";
 import { _ } from "$lib/i18n";
 import { loadMapDependencies } from "$lib/map/imports";
 import {
+	applyMapControlTranslations,
 	attribution,
 	changeDefaultIcons,
 	generateLocationIcon,
@@ -93,6 +95,7 @@ async function initializeMap() {
 	const LocateControl = deps.LocateControl;
 
 	// Create map instance
+	unsubscribeLocale?.();
 	if (map) map.remove(); // Clean up any existing map
 	map = leaflet
 		.map(mapElement, { attributionControl: false, maxZoom: 19 })
@@ -134,14 +137,26 @@ async function initializeMap() {
 	});
 
 	// Add map controls and settings
+	const translate = get(_);
+	const mapControlsT = {
+		locate: translate("mapControls.locate"),
+		fullScreen: translate("mapControls.fullScreen"),
+		zoomIn: translate("mapControls.zoomIn"),
+		zoomOut: translate("mapControls.zoomOut"),
+	};
 	try {
-		geolocate(leaflet, map, LocateControl);
+		geolocate(leaflet, map, LocateControl, mapControlsT);
 	} catch (e) {
 		console.error("Error adding locate control:", e);
 	}
 
-	changeDefaultIcons(false, leaflet, mapElement, DomEvent);
+	changeDefaultIcons(false, leaflet, mapElement, DomEvent, mapControlsT);
 	attribution(leaflet, map);
+
+	unsubscribeLocale?.();
+	unsubscribeLocale = _.subscribe(() => {
+		applyMapControlTranslations(get(_));
+	});
 
 	// Force a resize to ensure proper rendering
 	map.invalidateSize();
@@ -248,6 +263,7 @@ const submitForm = (event: SubmitEvent) => {
 let mapElement: HTMLDivElement;
 let map: Map;
 let mapLoaded = false;
+let unsubscribeLocale: (() => void) | undefined;
 
 let openFreeMapLiberty: MaplibreGL;
 let openFreeMapDark: MaplibreGL;
@@ -263,6 +279,7 @@ onMount(async () => {
 });
 
 onDestroy(async () => {
+	unsubscribeLocale?.();
 	if (map) {
 		console.info("Unloading Leaflet map.");
 		map.remove();

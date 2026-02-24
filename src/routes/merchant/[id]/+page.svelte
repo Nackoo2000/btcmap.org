@@ -5,6 +5,7 @@ import rewind from "@mapbox/geojson-rewind";
 import { geoContains } from "d3-geo";
 import type { Map, Marker } from "leaflet";
 import { onDestroy, onMount } from "svelte";
+import { get } from "svelte/store";
 import Time from "svelte-time";
 import tippy from "tippy.js";
 
@@ -22,6 +23,7 @@ import TopButton from "$components/TopButton.svelte";
 import { _ } from "$lib/i18n";
 import { loadMapDependencies } from "$lib/map/imports";
 import {
+	applyMapControlTranslations,
 	attribution,
 	calcVerifiedDate,
 	changeDefaultIcons,
@@ -91,6 +93,7 @@ const TOP_BUTTON_MIN_ITEMS = 10;
 
 let dataInitialized = false;
 let initialRenderComplete = false;
+let unsubscribeLocale: (() => void) | undefined;
 
 let leaflet: Leaflet;
 let DomEvent: DomEventType;
@@ -166,11 +169,23 @@ const initializeData = () => {
 
 		leaflet.control.layers(baseMaps).addTo(map);
 
+		const translate = get(_);
+		const mapControlsT = {
+			locate: translate("mapControls.locate"),
+			fullScreen: translate("mapControls.fullScreen"),
+			zoomIn: translate("mapControls.zoomIn"),
+			zoomOut: translate("mapControls.zoomOut"),
+		};
 		// add locate button to map
-		geolocate(leaflet, map, LocateControl);
+		geolocate(leaflet, map, LocateControl, mapControlsT);
 
 		// change default icons
-		changeDefaultIcons(true, leaflet, mapElement, DomEvent);
+		changeDefaultIcons(true, leaflet, mapElement, DomEvent, mapControlsT);
+
+		unsubscribeLocale?.();
+		unsubscribeLocale = _.subscribe(() => {
+			applyMapControlTranslations(get(_));
+		});
 
 		// add element to map
 		const divIcon = generateIcon(
@@ -380,6 +395,7 @@ $: if (merchantMarker && leaflet && mapLoaded && icon) {
 }
 
 onDestroy(async () => {
+	unsubscribeLocale?.();
 	if (map) {
 		console.info("Unloading Leaflet map.");
 		map.remove();

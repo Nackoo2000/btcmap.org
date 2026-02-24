@@ -3,11 +3,14 @@ import rewind from "@mapbox/geojson-rewind";
 import { geoArea } from "d3-geo";
 import type { Map } from "leaflet";
 import { onDestroy, onMount } from "svelte";
+import { get } from "svelte/store";
 
 import MapLoadingMain from "$components/MapLoadingMain.svelte";
 import Socials from "$components/Socials.svelte";
+import { _ } from "$lib/i18n";
 import { loadMapDependencies } from "$lib/map/imports";
 import {
+	applyMapControlTranslations,
 	attribution,
 	changeDefaultIcons,
 	geolocate,
@@ -39,6 +42,7 @@ let mapElement: HTMLDivElement;
 let map: Map;
 let mapLoaded = false;
 let communitiesLoaded = false;
+let unsubscribeLocale: (() => void) | undefined;
 
 // allow to view map centered on a community
 const communityQuery = $page.url.searchParams.get("community");
@@ -253,7 +257,21 @@ onMount(async () => {
 		});
 
 		// add support attribution
-		support();
+		const translate = get(_);
+		const mapControlsT = {
+			support: translate("mapControls.support"),
+			supportWithSats: translate("mapControls.supportWithSats"),
+			locate: translate("mapControls.locate"),
+			fullScreen: translate("mapControls.fullScreen"),
+			zoomIn: translate("mapControls.zoomIn"),
+			zoomOut: translate("mapControls.zoomOut"),
+			goToHome: translate("mapControls.goToHome"),
+			addLocation: translate("mapControls.addLocation"),
+			communityMap: translate("mapControls.communityMap"),
+			merchantMap: translate("mapControls.merchantMap"),
+			dataRefreshAvailable: translate("mapControls.dataRefreshAvailable"),
+		};
+		support(mapControlsT);
 
 		// add OSM attribution
 		attribution(leaflet, map);
@@ -262,15 +280,19 @@ onMount(async () => {
 		scaleBars(leaflet, map);
 
 		// add locate button to map
-		geolocate(leaflet, map, LocateControl);
+		geolocate(leaflet, map, LocateControl, mapControlsT);
 
 		// add home and marker buttons to map
-		homeMarkerButtons(leaflet, map, DomEvent);
+		homeMarkerButtons(leaflet, map, DomEvent, false, mapControlsT);
 
 		leaflet.control.layers(baseMaps).addTo(map);
 
 		// change default icons
-		changeDefaultIcons(true, leaflet, mapElement, DomEvent);
+		changeDefaultIcons(true, leaflet, mapElement, DomEvent, mapControlsT);
+
+		unsubscribeLocale = _.subscribe(() => {
+			applyMapControlTranslations(get(_));
+		});
 
 		// final map setup
 		mapLoading = 40;
@@ -280,6 +302,7 @@ onMount(async () => {
 });
 
 onDestroy(async () => {
+	unsubscribeLocale?.();
 	if (map) {
 		console.info("Unloading Leaflet map.");
 		map.remove();
